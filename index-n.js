@@ -4,6 +4,7 @@ const moment = require(`moment`)
 const util = require(`util`)
 const fMode = `Full Mode: Will get prompted for various other sections (Installation, Usage, etc.)`
 const bMode = `Basic Mode: Only name, title, and github sections are requested (all else left blank)`
+const axios = require(`axios`)
 
 const writeFileSync = util.promisify(fs.writeFile)
 
@@ -53,7 +54,15 @@ const questions = [
     {
         name: `usage`,
         type: `input`,
-        message: `What and how is your application used?`,
+        message: `How is your application used?`,
+        default: `N/A`,
+        when: (answers) => answers.mode === fMode,
+    },
+    {
+        name: `license`,
+        type: `input`,
+        message: `Which license will you be assigning to this project?`,
+        // could make this an option with an [other]
         default: `N/A`,
         when: (answers) => answers.mode === fMode,
     },
@@ -83,53 +92,71 @@ function askUser() {
     return inquirer.prompt(questions)
 }
 
-function generateREADME(a, git) {
-    return `# Title
-* ${a.title} 
+function generateREADME(a, gitPhotoURL, gitEmail) {
+    if (gitEmail === undefined || gitEmail === null) {
+        gitEmail = `There appears to be no email associated with your GitHub Account`
+    }
+    if (a.installation === undefined) {
+        a.installation = `[Enter installation information here]`
+    }
+    if (a.description === undefined) {
+        a.description = `[Enter project description here]`
+    }
+    if (a.usage === undefined) {
+        a.usage = `[Enter how project is to be used here]`
+    }
+    if (a.contributing === undefined) {
+        a.contributing = `[Enter other contributors here]`
+    }
+    if (a.license === undefined) {
+        a.license = `[Enter licenses used here]`
+    }
 
-# Description
-* I see your name is ${a.name}
+    return `# A Project by: 
+${a.name} (GitHub user: ${a.githubName})
+[![GitHub Avatar](${gitPhotoURL})]
+My email address: ${gitEmail}
 
-# Installation
+## Title
+* ${a.title}
+
+## Description
+* ${a.description}
+
+## Installation
 * ${a.installation}
 
-# Usage
+## Usage
 * ${a.usage}
 
-# Contributors
-* ${a.contributing}
+## License
+* ${a.license}
 
-# GitHub information
-* ${a.githubName}
+## Contributors
+* ${a.name} and ${a.contributing}
 `
-}
-
-const getGitHubInfo = name => {
-    $.ajax({
-        queryUrl: `https://api.github.com/users/${name}/repos?per_page=100`,
-        method: `GET`,
-    }).then(function (res) {
-        console.log(res.data)
-        //   for(i of res.data){
-        //     repoArray.push(i.name)
-        //   }
-        //   fs.writeFile(`repos.txt`,repoArray.join(`\n`), err => {
-        //     if (err) throw err
-        //     console.log(`Succesfully added ${repoArray.length} repos into "repos.txt"`)
-        //   })
-    })
 }
 
 async function renderNewFile() {
     try {
         let filename = `./generated-files/README-` + moment().format(`YYYYMMDDhhmmss`) + `.md`
+        let gitPhotoURL, gitEmail
 
         const answers = await askUser()             // waiting for inquirer prompt to gather all answers from user
-        const githubInfo = getGitHubInfo(answers.githubName)
-        const readmeText = generateREADME(answers, githubInfo)  // send answers obj to generateREADME function to parse 
-        await writeFileSync(filename, readmeText)   // create README.md file (timestamped) with README template
+        await axios.get(`https://api.github.com/users/${answers.githubName}`).then(function (res) {
+            console.log(res.data)
+            gitPhotoURL = res.data.avatar_url
+            gitEmail = res.data.email
 
-        console.log(`File created (${filename})!`)
+            //   for(i of res.data){
+            //     repoArray.push(i.name)
+            //   }
+        })
+
+        const readmeText = generateREADME(answers, gitPhotoURL, gitEmail)   // send answers obj to generateREADME function to parse 
+        writeFileSync(filename, readmeText)                                 // create README.md file (timestamped) with README template
+
+        // console.log(`File created (${filename})!`)
         // console.log(readmeText)
 
     } catch (err) {

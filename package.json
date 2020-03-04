@@ -1,0 +1,16 @@
+{
+  "name": "readME-generator",
+  "version": "1.0.0",
+  "description": "* Functional, deployed application.",
+  "main": "index-generator.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "inquirer": "^7.0.4",
+    "moment": "^2.24.0"
+  }
+}
